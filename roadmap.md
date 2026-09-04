@@ -1,10 +1,15 @@
 # Roadmap
 
-## Pendente
-- [ ] /upload/$sessionId (página do celular) + integrar <ErrorAnalysis /> em /simulados/$id
-- [ ] Passo 2: /praticar com exame avulso status 'pratica' + próxima questão por tipo de erro
-- [ ] Passo 4: dashboard de assuntos pendentes
-- [ ] Passo 5: select de banca com referência de questões/áreas
-- [ ] Passo 6: toggle "só banco de questões" (status 'banco') + filtro na lista de simulados
-- [ ] Passo 7: upload de edital em materials + geração de questões inéditas
-- [ ] Gravar subject_id ao criar aulas manuais e resumos
+## Concluído
+- /upload/$sessionId (página do celular: foto → transcrição)
+- /simulados/$id usa <ErrorAnalysis /> reutilizável
+- /praticar com exame avulso status 'pratica' + próxima questão por tipo de erro
+- Dashboard de assuntos pendentes na home
+- Select de banca com referência de questões/áreas (src/lib/boards.ts)
+- Toggle "só banco de questões" (status 'banco') + filtro/badges em /simulados
+- Upload de edital em materials + geração de questões inéditas (generateFromEdital)
+- subject_id gravado em aulas manuais (custom_lessons) e resumos (lesson_summaries)
+- Typecheck ok
+
+## Aberto
+- (nada)
