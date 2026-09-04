@@ -8,6 +8,13 @@
       "when": 1788497878488,
       "tag": "0000_create_custom_lessons",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788497929078,
+      "tag": "0001_baseline_core_schema",
+      "breakpoints": true
     }
   ]
 }
