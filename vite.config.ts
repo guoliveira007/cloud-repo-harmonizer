@@ -11,18 +11,24 @@ export default defineConfig({
     plugins: [
       {
         name: "normalize-generated-supabase-env-access",
-        enforce: "pre",
+        // Run after Lovable's managed env plugin so bracket notation left behind
+        // is normalized before Vite replaces public environment variables.
+        enforce: "post",
         transform(code, id) {
-          if (!id.endsWith("/src/integrations/supabase/client.ts")) return null;
-          return code
+          const cleanId = id.split("?", 1)[0]?.replaceAll("\\", "/");
+          if (!cleanId?.endsWith("/src/integrations/supabase/client.ts")) return null;
+
+          const normalized = code
             .replace(
-              "import.meta.env['VITE_SUPABASE_URL']",
+              /import\.meta\.env\[['"]VITE_SUPABASE_URL['"]\]/g,
               "import.meta.env.VITE_SUPABASE_URL",
             )
             .replace(
-              "import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY']",
+              /import\.meta\.env\[['"]VITE_SUPABASE_PUBLISHABLE_KEY['"]\]/g,
               "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY",
             );
+
+          return normalized === code ? null : { code: normalized, map: null };
         },
       },
     ],
