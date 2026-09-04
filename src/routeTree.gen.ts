@@ -15,12 +15,14 @@ import { Route as BibliotecaRouteImport } from './routes/biblioteca'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as FlashcardsRouteImport } from './routes/flashcards'
 import { Route as NuvemRouteImport } from './routes/nuvem'
+import { Route as PraticarRouteImport } from './routes/praticar'
 import { Route as QuizzesRouteImport } from './routes/quizzes'
 import { Route as RevisoesRouteImport } from './routes/revisoes'
 import { Route as MateriaIdRouteImport } from './routes/materia.$id'
 import { Route as SimuladosIndexRouteImport } from './routes/simulados.index'
 import { Route as SimuladosIdRouteImport } from './routes/simulados.$id'
 import { Route as SimuladosNovoRouteImport } from './routes/simulados.novo'
+import { Route as UploadSessionIdRouteImport } from './routes/upload.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -50,6 +52,11 @@ const FlashcardsRoute = FlashcardsRouteImport.update({
 const NuvemRoute = NuvemRouteImport.update({
   id: '/nuvem',
   path: '/nuvem',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PraticarRoute = PraticarRouteImport.update({
+  id: '/praticar',
+  path: '/praticar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const QuizzesRoute = QuizzesRouteImport.update({
@@ -82,6 +89,11 @@ const SimuladosNovoRoute = SimuladosNovoRouteImport.update({
   path: '/simulados/novo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadSessionIdRoute = UploadSessionIdRouteImport.update({
+  id: '/upload/$sessionId',
+  path: '/upload/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -90,11 +102,13 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/flashcards': typeof FlashcardsRoute
   '/nuvem': typeof NuvemRoute
+  '/praticar': typeof PraticarRoute
   '/quizzes': typeof QuizzesRoute
   '/revisoes': typeof RevisoesRoute
   '/materia/$id': typeof MateriaIdRoute
   '/simulados/$id': typeof SimuladosIdRoute
   '/simulados/novo': typeof SimuladosNovoRoute
+  '/upload/$sessionId': typeof UploadSessionIdRoute
   '/simulados/': typeof SimuladosIndexRoute
 }
 export interface FileRoutesByTo {
@@ -104,11 +118,13 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/flashcards': typeof FlashcardsRoute
   '/nuvem': typeof NuvemRoute
+  '/praticar': typeof PraticarRoute
   '/quizzes': typeof QuizzesRoute
   '/revisoes': typeof RevisoesRoute
   '/materia/$id': typeof MateriaIdRoute
   '/simulados/$id': typeof SimuladosIdRoute
   '/simulados/novo': typeof SimuladosNovoRoute
+  '/upload/$sessionId': typeof UploadSessionIdRoute
   '/simulados': typeof SimuladosIndexRoute
 }
 export interface FileRoutesById {
@@ -119,11 +135,13 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/flashcards': typeof FlashcardsRoute
   '/nuvem': typeof NuvemRoute
+  '/praticar': typeof PraticarRoute
   '/quizzes': typeof QuizzesRoute
   '/revisoes': typeof RevisoesRoute
   '/materia/$id': typeof MateriaIdRoute
   '/simulados/$id': typeof SimuladosIdRoute
   '/simulados/novo': typeof SimuladosNovoRoute
+  '/upload/$sessionId': typeof UploadSessionIdRoute
   '/simulados/': typeof SimuladosIndexRoute
 }
 export interface FileRouteTypes {
@@ -135,11 +153,13 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/flashcards'
     | '/nuvem'
+    | '/praticar'
     | '/quizzes'
     | '/revisoes'
     | '/materia/$id'
     | '/simulados/$id'
     | '/simulados/novo'
+    | '/upload/$sessionId'
     | '/simulados/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,11 +169,13 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/flashcards'
     | '/nuvem'
+    | '/praticar'
     | '/quizzes'
     | '/revisoes'
     | '/materia/$id'
     | '/simulados/$id'
     | '/simulados/novo'
+    | '/upload/$sessionId'
     | '/simulados'
   id:
     | '__root__'
@@ -163,11 +185,13 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/flashcards'
     | '/nuvem'
+    | '/praticar'
     | '/quizzes'
     | '/revisoes'
     | '/materia/$id'
     | '/simulados/$id'
     | '/simulados/novo'
+    | '/upload/$sessionId'
     | '/simulados/'
   fileRoutesById: FileRoutesById
 }
@@ -178,11 +202,13 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   FlashcardsRoute: typeof FlashcardsRoute
   NuvemRoute: typeof NuvemRoute
+  PraticarRoute: typeof PraticarRoute
   QuizzesRoute: typeof QuizzesRoute
   RevisoesRoute: typeof RevisoesRoute
   MateriaIdRoute: typeof MateriaIdRoute
   SimuladosIdRoute: typeof SimuladosIdRoute
   SimuladosNovoRoute: typeof SimuladosNovoRoute
+  UploadSessionIdRoute: typeof UploadSessionIdRoute
   SimuladosIndexRoute: typeof SimuladosIndexRoute
 }
 
@@ -230,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NuvemRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/praticar': {
+      id: '/praticar'
+      path: '/praticar'
+      fullPath: '/praticar'
+      preLoaderRoute: typeof PraticarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quizzes': {
       id: '/quizzes'
       path: '/quizzes'
@@ -272,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SimuladosNovoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload/$sessionId': {
+      id: '/upload/$sessionId'
+      path: '/upload/$sessionId'
+      fullPath: '/upload/$sessionId'
+      preLoaderRoute: typeof UploadSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -282,11 +322,13 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   FlashcardsRoute: FlashcardsRoute,
   NuvemRoute: NuvemRoute,
+  PraticarRoute: PraticarRoute,
   QuizzesRoute: QuizzesRoute,
   RevisoesRoute: RevisoesRoute,
   MateriaIdRoute: MateriaIdRoute,
   SimuladosIdRoute: SimuladosIdRoute,
   SimuladosNovoRoute: SimuladosNovoRoute,
+  UploadSessionIdRoute: UploadSessionIdRoute,
   SimuladosIndexRoute: SimuladosIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -2,16 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Check, Loader2, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { ErrorAnalysis } from "@/components/ErrorAnalysis";
 import { StudyPlanContent } from "@/components/StudyPlan";
 import { supabase } from "@/integrations/supabase/client";
-import { analyzeError, generateStudyPlan } from "@/lib/exams.functions";
+import { generateStudyPlan } from "@/lib/exams.functions";
 import { formatDate, percent } from "@/lib/exam-utils";
-import { createFlashcardFromError } from "@/lib/exam-link";
-import { fetchSubjects } from "@/lib/study";
 
 export const Route = createFileRoute("/simulados/$id")({
   head: () => ({
@@ -213,48 +212,18 @@ type QuestionRow = {
 
 function WrongQuestion({ question, examId }: { question: QuestionRow; examId: string }) {
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
   const queryClient = useQueryClient();
-  const analyze = useServerFn(analyzeError);
 
   const review = useQuery({
     queryKey: ["error-review", question.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("error_reviews")
-        .select("*")
+        .select("id")
         .eq("question_id", question.id)
         .maybeSingle();
       return data;
     },
-  });
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const review = await analyze({ data: { questionId: question.id, explanation: text } });
-      let card: string = "sem-materia";
-      try {
-        const subjects = await fetchSubjects();
-        card = await createFlashcardFromError(subjects, question, review);
-      } catch {
-        card = "erro";
-      }
-      return { review, card };
-    },
-    onSuccess: ({ card }) => {
-      setText("");
-      queryClient.invalidateQueries({ queryKey: ["error-review", question.id] });
-      queryClient.invalidateQueries({ queryKey: ["revisoes"] });
-      queryClient.invalidateQueries({ queryKey: ["subject-errors"] });
-      queryClient.invalidateQueries({ queryKey: ["flashcards"] });
-      queryClient.invalidateQueries({ queryKey: ["exam-plan", examId] });
-      toast.success(
-        card === "created"
-          ? "Análise pronta e flashcard criado na frente da matéria."
-          : "Análise pronta.",
-      );
-    },
-    onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao analisar."),
   });
 
   return (
@@ -275,6 +244,11 @@ function WrongQuestion({ question, examId }: { question: QuestionRow; examId: st
             <span className="block truncate text-xs text-ink-soft">{question.statement}</span>
           )}
         </span>
+        {review.data && (
+          <span className="shrink-0 rounded-full bg-sun/15 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-sun-deep">
+            analisada
+          </span>
+        )}
         <span className="shrink-0 font-mono text-[11px] text-ink-soft">
           <span className="text-destructive">{question.user_answer ?? "—"}</span> →{" "}
           <span className="text-sun-deep">{question.correct_answer ?? "—"}</span>
@@ -283,80 +257,13 @@ function WrongQuestion({ question, examId }: { question: QuestionRow; examId: st
 
       {open && (
         <div className="border-t border-line px-4 py-4">
-          {review.data ? (
-            <div className="space-y-4 text-sm">
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-destructive/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-destructive">
-                  {review.data.error_type}
-                </span>
-                <span className="rounded-full bg-sun/15 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-sun-deep">
-                  {review.data.concept}
-                </span>
-              </div>
-              <div>
-                <p className="font-display font-semibold">Onde o raciocínio falhou</p>
-                <p className="mt-1 text-ink-soft">{review.data.why_wrong}</p>
-              </div>
-              <div>
-                <p className="font-display font-semibold">Caminho correto</p>
-                <p className="mt-1 whitespace-pre-line text-ink-soft">
-                  {review.data.correct_reasoning}
-                </p>
-              </div>
-              {review.data.visual_svg && (
-                <figure className="rounded-lg border border-line bg-paper p-4 text-ink">
-                  <div dangerouslySetInnerHTML={{ __html: review.data.visual_svg }} />
-                  {review.data.visual_caption && (
-                    <figcaption className="mt-2 text-center text-xs text-ink-soft">
-                      {review.data.visual_caption}
-                    </figcaption>
-                  )}
-                </figure>
-              )}
-              <button
-                onClick={() => {
-                  setText(review.data?.user_explanation ?? "");
-                  queryClient.setQueryData(["error-review", question.id], null);
-                }}
-                className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink-soft hover:text-sun-deep"
-              >
-                Reanalisar
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <label className="block text-sm font-medium">
-                Explique o raciocínio que te levou à alternativa marcada
-              </label>
-              <textarea
-                className="min-h-24 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-sun"
-                value={text}
-                maxLength={3000}
-                placeholder="Achei que bastava multiplicar as duas taxas porque…"
-                onChange={(e) => setText(e.target.value)}
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => mutation.mutate()}
-                  disabled={mutation.isPending || text.trim().length < 5}
-                  className="inline-flex items-center gap-2 rounded-md bg-sun px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-                >
-                  {mutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Check className="size-4" />
-                  )}
-                  Analisar erro
-                </button>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-ink-soft hover:text-ink"
-                >
-                  <X className="size-4" /> Fechar
-                </button>
-              </div>
-            </div>
-          )}
+          <ErrorAnalysis
+            question={question}
+            onDone={() =>
+              queryClient.invalidateQueries({ queryKey: ["exam-plan", examId] })
+            }
+            onCancel={() => setOpen(false)}
+          />
         </div>
       )}
     </div>

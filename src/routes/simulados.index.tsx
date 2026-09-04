@@ -6,6 +6,15 @@ import { Plus } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate, percent } from "@/lib/exam-utils";
+import { BANK_STATUS, HIDDEN_EXAM_STATUS, PRACTICE_STATUS } from "@/lib/practice";
+
+type StatusFilter = "simulados" | "banco" | "todos";
+
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "simulados", label: "Simulados" },
+  { id: "banco", label: "Banco" },
+  { id: "todos", label: "Todos" },
+];
 
 export const Route = createFileRoute("/simulados/")({
   head: () => ({
@@ -30,20 +39,28 @@ export const Route = createFileRoute("/simulados/")({
 
 function SimuladosPage() {
   const [term, setTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("simulados");
 
   const exams = useQuery({
     queryKey: ["exams"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exams")
-        .select("id, title, exam_date, board, total_questions, correct_count")
+        .select("id, title, exam_date, board, status, total_questions, correct_count")
         .order("exam_date", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
 
-  const list = (exams.data ?? []).filter((e) =>
+  const visible = (exams.data ?? []).filter((e) => {
+    if (e.status === PRACTICE_STATUS) return false;
+    if (statusFilter === "todos") return true;
+    if (statusFilter === "banco") return e.status === BANK_STATUS;
+    return !HIDDEN_EXAM_STATUS.includes(e.status);
+  });
+
+  const list = visible.filter((e) =>
     `${e.title} ${e.board ?? ""}`.toLowerCase().includes(term.trim().toLowerCase()),
   );
 
@@ -73,6 +90,22 @@ function SimuladosPage() {
         onChange={(e) => setTerm(e.target.value)}
       />
 
+      <div className="mt-3 flex gap-2">
+        {STATUS_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={
+              statusFilter === f.id
+                ? "rounded-full bg-sun px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+                : "rounded-full border border-line px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-sun"
+            }
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {exams.isLoading ? (
         <p className="mt-8 font-mono text-xs uppercase tracking-[0.2em] text-ink-soft">Carregando…</p>
       ) : list.length === 0 ? (
@@ -94,12 +127,23 @@ function SimuladosPage() {
               </p>
               <h2 className="mt-1 font-display text-lg font-semibold">{e.title}</h2>
               <div className="mt-4 flex items-end justify-between">
-                <span className="font-display text-3xl font-bold text-sun-deep">
-                  {percent(e.correct_count, e.total_questions)}%
-                </span>
-                <span className="text-xs text-ink-soft">
-                  {e.correct_count}/{e.total_questions} acertos
-                </span>
+                {e.status === BANK_STATUS ? (
+                  <>
+                    <span className="rounded-full bg-sun/15 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-sun-deep">
+                      banco de questões
+                    </span>
+                    <span className="text-xs text-ink-soft">{e.total_questions} questões</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-display text-3xl font-bold text-sun-deep">
+                      {percent(e.correct_count, e.total_questions)}%
+                    </span>
+                    <span className="text-xs text-ink-soft">
+                      {e.correct_count}/{e.total_questions} acertos
+                    </span>
+                  </>
+                )}
               </div>
             </Link>
           ))}

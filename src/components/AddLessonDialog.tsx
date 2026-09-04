@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -10,7 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { subjects } from "@/data/subjects";
+import { catalogNameFor } from "@/data/subject-map";
 import { addCustomLesson, isoToShortDate } from "@/lib/custom-lessons";
+import { fetchSubjects } from "@/lib/study";
 
 type Props = {
   open: boolean;
@@ -24,6 +26,7 @@ const label = "font-mono text-[10px] uppercase tracking-[0.16em] text-ink-soft";
 
 export function AddLessonDialog({ open, onOpenChange, defaultSubject }: Props) {
   const queryClient = useQueryClient();
+  const { data: dbSubjects = [] } = useQuery({ queryKey: ["subjects"], queryFn: fetchSubjects });
   const [subject, setSubject] = useState(defaultSubject);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [professor, setProfessor] = useState("");
@@ -40,6 +43,10 @@ export function AddLessonDialog({ open, onOpenChange, defaultSubject }: Props) {
     }
     setSaving(true);
     try {
+      const dbName = catalogNameFor(subject);
+      const dbSubject = dbName
+        ? dbSubjects.find((s) => !s.parent_id && s.name === dbName)
+        : undefined;
       await addCustomLesson({
         subject,
         date: isoToShortDate(date),
@@ -47,6 +54,7 @@ export function AddLessonDialog({ open, onOpenChange, defaultSubject }: Props) {
         frente: frente.trim(),
         title: title.trim(),
         url: url.trim(),
+        subjectId: dbSubject?.id ?? null,
       });
       await queryClient.invalidateQueries({ queryKey: ["custom-lessons"] });
       toast.success("Aula adicionada.");
