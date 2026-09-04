@@ -32,6 +32,7 @@ export type CustomLessonInput = {
   frente: string;
   title: string;
   url: string;
+  subjectId?: string | null;
 };
 
 export type CustomLesson = Lesson & { custom: true; rowId: string };
@@ -80,6 +81,7 @@ export async function addCustomLesson(input: CustomLessonInput) {
     frente: input.frente,
     title: input.title,
     url: input.url,
+    subject_id: input.subjectId ?? null,
   });
   if (error) throw error;
 }

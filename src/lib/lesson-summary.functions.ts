@@ -40,6 +40,7 @@ export const generateLessonSummary = createServerFn({ method: "POST" })
         lessonId: z.string().min(1),
         lessonTitle: z.string().min(1).max(300),
         subject: z.string().max(120).optional(),
+        subjectId: z.string().uuid().optional(),
         transcript: z.string().min(200, "A transcrição está curta demais."),
       })
       .parse(input),
@@ -62,6 +63,7 @@ export const generateLessonSummary = createServerFn({ method: "POST" })
         lesson_id: data.lessonId,
         lesson_title: data.lessonTitle,
         subject: data.subject ?? null,
+        subject_id: data.subjectId ?? null,
         transcript,
         summary,
         updated_at: new Date().toISOString(),

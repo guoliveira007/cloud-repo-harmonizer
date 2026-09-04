@@ -13,6 +13,11 @@ const CATALOG_BY_NAME: Record<string, string> = {
   "Filosofia e Sociologia": "filosofia",
 };
 
+/** Nome da matéria no banco a partir do id no catálogo de aulas (ex.: "biologia" -> "Biologia"). */
+export function catalogNameFor(catalogId: string): string | undefined {
+  return Object.entries(CATALOG_BY_NAME).find(([, id]) => id === catalogId)?.[0];
+}
+
 export function catalogSubjectFor(name: string): CatalogSubject | undefined {
   const id = CATALOG_BY_NAME[name];
   return id ? catalog.find((s) => s.id === id) : undefined;

@@ -87,6 +87,7 @@ export function LessonSummaryDialog({ lesson, onOpenChange }: Props) {
           lessonId: lesson.id,
           lessonTitle: lesson.title,
           subject: lesson.subject,
+          ...(targetSubjectId ? { subjectId: targetSubjectId } : {}),
           transcript: transcript.trim(),
         },
       });

@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
+import { BOARDS, boardById } from "@/lib/boards";
+import { BANK_STATUS } from "@/lib/practice";
 import {
   extractAnswerKey,
   extractExamQuestions,
@@ -56,7 +58,9 @@ function NovoSimulado() {
   const [step, setStep] = useState(1);
   const [title, setTitle] = useState("");
   const [examDate, setExamDate] = useState(today());
+  const [boardId, setBoardId] = useState("");
   const [board, setBoard] = useState("");
+  const [bankOnly, setBankOnly] = useState(false);
   const [total, setTotal] = useState(20);
 
   const [examPath, setExamPath] = useState<string | null>(null);
@@ -146,7 +150,7 @@ function NovoSimulado() {
       const rows = numbers.map((n) => {
         const extracted = questions.find((q) => q.number === n);
         const correct = keyAnswers[n]?.toUpperCase() ?? null;
-        const mine = myAnswers[n]?.toUpperCase() ?? null;
+        const mine = bankOnly ? null : (myAnswers[n]?.toUpperCase() ?? null);
         return {
           user_id: uid,
           number: n,
@@ -156,7 +160,7 @@ function NovoSimulado() {
           options: extracted?.options ?? null,
           correct_answer: correct,
           user_answer: mine,
-          is_correct: correct && mine ? correct === mine : mine === null ? false : null,
+          is_correct: bankOnly ? null : correct && mine ? correct === mine : mine === null ? false : null,
         };
       });
       const classified = classifyQuestions(subjects, rows);
@@ -171,7 +175,7 @@ function NovoSimulado() {
           board: board.trim().slice(0, 80) || null,
           total_questions: rows.length,
           correct_count: correctCount,
-          status: "corrigido",
+          status: bankOnly ? BANK_STATUS : "corrigido",
           exam_file_path: examPath,
         })
         .select()
@@ -182,6 +186,13 @@ function NovoSimulado() {
         .from("exam_questions")
         .insert(classified.map((r) => ({ ...r, exam_id: exam.id })));
       if (qError) throw qError;
+
+      if (bankOnly) {
+        toast.success(`Banco salvo: ${rows.length} questões disponíveis para praticar.`);
+        queryClient.invalidateQueries({ queryKey: ["exams"] });
+        navigate({ to: "/simulados" });
+        return;
+      }
 
       toast.success(`Correção pronta: ${correctCount}/${rows.length} acertos.`);
       queryClient.invalidateQueries({ queryKey: ["exams"] });
@@ -247,13 +258,46 @@ function NovoSimulado() {
               </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium">Banca / tipo</span>
-                <input
+                <select
                   className={field}
-                  value={board}
-                  maxLength={80}
-                  placeholder="ENEM, FUVEST, Unifesp…"
-                  onChange={(e) => setBoard(e.target.value)}
-                />
+                  value={boardId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setBoardId(id);
+                    const ref = boardById(id);
+                    if (ref) {
+                      setBoard(ref.name);
+                      setTotal(ref.areas.reduce((acc, a) => acc + a.questions, 0));
+                    } else if (id !== "outra") {
+                      setBoard("");
+                    }
+                  }}
+                >
+                  <option value="">Selecione…</option>
+                  {BOARDS.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                  <option value="outra">Outra</option>
+                </select>
+                {boardId === "outra" && (
+                  <input
+                    className={field}
+                    value={board}
+                    maxLength={80}
+                    placeholder="Nome da banca ou do simulado"
+                    onChange={(e) => setBoard(e.target.value)}
+                  />
+                )}
+                {boardById(boardId) && (
+                  <span className="block text-xs text-ink-soft">
+                    {boardById(boardId)!.reference} —{" "}
+                    {boardById(boardId)!
+                      .areas.map((a) => `${a.area}: ${a.questions}`)
+                      .join(" · ")}
+                  </span>
+                )}
               </label>
               <label className="space-y-2 text-sm">
                 <span className="font-medium">Número de questões</span>
@@ -267,6 +311,21 @@ function NovoSimulado() {
                 />
               </label>
             </div>
+            <label className="flex items-start gap-3 rounded-lg border border-line bg-paper px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                checked={bankOnly}
+                onChange={(e) => setBankOnly(e.target.checked)}
+                className="mt-0.5 accent-primary"
+              />
+              <span>
+                <span className="font-medium">Usar só como banco de questões</span>
+                <span className="block text-xs text-ink-soft">
+                  A prova entra no banco para sessões de prática, mas não aparece como simulado
+                  corrigido nem conta na sua nota.
+                </span>
+              </span>
+            </label>
           </div>
         )}
 
@@ -274,8 +333,9 @@ function NovoSimulado() {
           <div className="space-y-4">
             <h2 className="font-display text-lg font-semibold">PDF da prova</h2>
             <p className="text-sm text-ink-soft">
-              A IA lê o arquivo e identifica questões, matérias e assuntos. Opcional — você pode
-              pular e corrigir só pelas letras.
+              {bankOnly
+                ? "A IA lê o arquivo e identifica questões, matérias e assuntos — sem o PDF, o banco fica sem enunciados para a prática."
+                : "A IA lê o arquivo e identifica questões, matérias e assuntos. Opcional — você pode pular e corrigir só pelas letras."}
             </p>
             <FileDrop
               label={readingExam ? "Lendo a prova…" : "Selecionar PDF da prova"}
@@ -317,10 +377,19 @@ function NovoSimulado() {
         {step === 4 && (
           <div className="space-y-4">
             <h2 className="font-display text-lg font-semibold">Suas respostas</h2>
-            <p className="text-sm text-ink-soft">
-              Marque o que você assinalou. Deixe em branco o que não respondeu.
-            </p>
-            <AnswerGrid numbers={numbers} answers={myAnswers} onChange={setMyAnswers} />
+            {bankOnly ? (
+              <p className="rounded-lg border border-line bg-paper px-4 py-3 text-sm text-ink-soft">
+                Banco de questões: não há respostas para marcar. Salve para disponibilizar as
+                questões nas sessões de prática.
+              </p>
+            ) : (
+              <>
+                <p className="text-sm text-ink-soft">
+                  Marque o que você assinalou. Deixe em branco o que não respondeu.
+                </p>
+                <AnswerGrid numbers={numbers} answers={myAnswers} onChange={setMyAnswers} />
+              </>
+            )}
           </div>
         )}
       </div>

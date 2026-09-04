@@ -42,3 +42,47 @@ export const PRACTICE_STATUS = "pratica";
 export const BANK_STATUS = "banco";
 /** Exames que não contam como "prova que eu fiz". */
 export const HIDDEN_EXAM_STATUS = [PRACTICE_STATUS, BANK_STATUS];
+
+/** Questão disponível para uma sessão de prática. */
+export type PracticePoolQuestion = {
+  id: string;
+  subject_id: string | null;
+  subject: string | null;
+  topic: string | null;
+  statement: string;
+  options: Record<string, string>;
+  correct_answer: string;
+};
+
+/**
+ * Escolhe a próxima questão da sessão com base no tipo de erro anterior:
+ * - nao_sabia_conceito → mais questões do mesmo assunto;
+ * - confundiu_assunto → intercala com outra matéria;
+ * - desatencao_conta → repete o mesmo tipo de questão (mesmo tópico);
+ * - sem contexto → a primeira disponível (pool já vem embaralhado).
+ */
+export function pickNextPractice(
+  pool: PracticePoolQuestion[],
+  used: Set<string>,
+  last: { kind: ErrorKind | null; subjectId: string | null; topic: string | null },
+): PracticePoolQuestion | null {
+  const remaining = pool.filter((q) => !used.has(q.id));
+  if (remaining.length === 0) return null;
+  if (!last.kind) return remaining[0]!;
+
+  if (last.kind === "nao_sabia_conceito" && last.subjectId) {
+    const same = remaining.find((q) => q.subject_id === last.subjectId);
+    if (same) return same;
+  }
+  if (last.kind === "desatencao_conta" && last.topic) {
+    const sameTopic = remaining.find((q) => q.topic && q.topic === last.topic);
+    if (sameTopic) return sameTopic;
+    const sameSubject = remaining.find((q) => q.subject_id === last.subjectId);
+    if (sameSubject) return sameSubject;
+  }
+  if (last.kind === "confundiu_assunto" && last.subjectId) {
+    const other = remaining.find((q) => q.subject_id && q.subject_id !== last.subjectId);
+    if (other) return other;
+  }
+  return remaining[0]!;
+}
