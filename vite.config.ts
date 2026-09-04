@@ -29,9 +29,10 @@ function injectGeneratedSupabasePublicEnv() {
     configResolved(config: {
       env: Record<string, string | undefined>;
     }) {
-      supabaseUrl ??= config.env["VITE_SUPABASE_URL"];
-      supabasePublishableKey ??=
-        config.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+      const configuredUrl = config.env["VITE_SUPABASE_URL"];
+      const configuredKey = config.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+      if (configuredUrl) supabaseUrl = configuredUrl;
+      if (configuredKey) supabasePublishableKey = configuredKey;
     },
     transform(code: string, id: string) {
       const cleanId = id.split("?", 1)[0]?.replaceAll("\\", "/");
