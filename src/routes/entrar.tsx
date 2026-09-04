@@ -76,7 +76,7 @@ function EntrarPage() {
 
 
   return (
-    <div className="grid min-h-screen place-items-center px-4 py-10">
+    <main className="grid min-h-screen place-items-center px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2">
           <span className="grid size-8 place-items-center rounded-md bg-sun font-display text-sm font-bold text-primary-foreground">
@@ -159,6 +159,6 @@ function EntrarPage() {
           </button>
         </form>
       </div>
-    </div>
+    </main>
   );
 }
