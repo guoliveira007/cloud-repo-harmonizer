@@ -6,11 +6,22 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// These are public browser credentials, not secrets. The managed remote build
+// currently exposes their unprefixed variants only to the server runtime, so
+// keep a build-safe fallback for the generated browser client.
+const PUBLIC_SUPABASE_URL = "https://obhjbvtvicarnxzkieoo.supabase.co";
+const PUBLIC_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_YPcMqjCcKDQw6LOtMyEAPQ_0esReKea";
+
 function injectGeneratedSupabasePublicEnv() {
-  let supabaseUrl = process.env["VITE_SUPABASE_URL"] ?? process.env["SUPABASE_URL"];
+  let supabaseUrl =
+    process.env["VITE_SUPABASE_URL"] ??
+    process.env["SUPABASE_URL"] ??
+    PUBLIC_SUPABASE_URL;
   let supabasePublishableKey =
     process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ??
-    process.env["SUPABASE_PUBLISHABLE_KEY"];
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ??
+    PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   return {
     name: "inject-generated-supabase-public-env",
@@ -18,9 +29,10 @@ function injectGeneratedSupabasePublicEnv() {
     configResolved(config: {
       env: Record<string, string | undefined>;
     }) {
-      supabaseUrl ??= config.env["VITE_SUPABASE_URL"];
-      supabasePublishableKey ??=
-        config.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+      const configuredUrl = config.env["VITE_SUPABASE_URL"];
+      const configuredKey = config.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
+      if (configuredUrl) supabaseUrl = configuredUrl;
+      if (configuredKey) supabasePublishableKey = configuredKey;
     },
     transform(code: string, id: string) {
       const cleanId = id.split("?", 1)[0]?.replaceAll("\\", "/");
