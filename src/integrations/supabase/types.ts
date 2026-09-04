@@ -22,6 +22,7 @@ export type Database = {
           id: string
           professor: string
           subject: string
+          subject_id: string | null
           title: string
           url: string
           user_id: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           professor?: string
           subject: string
+          subject_id?: string | null
           title: string
           url?: string
           user_id: string
@@ -44,11 +46,20 @@ export type Database = {
           id?: string
           professor?: string
           subject?: string
+          subject_id?: string | null
           title?: string
           url?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "custom_lessons_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       error_reviews: {
         Row: {
@@ -94,7 +105,7 @@ export type Database = {
           {
             foreignKeyName: "error_reviews_question_id_fkey"
             columns: ["question_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "exam_questions"
             referencedColumns: ["id"]
           },
@@ -301,6 +312,7 @@ export type Database = {
           lesson_id: string
           lesson_title: string | null
           subject: string | null
+          subject_id: string | null
           summary: string
           transcript: string
           updated_at: string
@@ -312,6 +324,7 @@ export type Database = {
           lesson_id: string
           lesson_title?: string | null
           subject?: string | null
+          subject_id?: string | null
           summary?: string
           transcript?: string
           updated_at?: string
@@ -323,12 +336,21 @@ export type Database = {
           lesson_id?: string
           lesson_title?: string | null
           subject?: string | null
+          subject_id?: string | null
           summary?: string
           transcript?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lesson_summaries_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       materials: {
         Row: {
@@ -579,6 +601,50 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upload_sessions: {
+        Row: {
+          created_at: string
+          error: string | null
+          exam_question_id: string | null
+          id: string
+          photo_path: string | null
+          status: string
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          exam_question_id?: string | null
+          id?: string
+          photo_path?: string | null
+          status?: string
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          exam_question_id?: string | null
+          id?: string
+          photo_path?: string | null
+          status?: string
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upload_sessions_exam_question_id_fkey"
+            columns: ["exam_question_id"]
+            isOneToOne: false
+            referencedRelation: "exam_questions"
             referencedColumns: ["id"]
           },
         ]
