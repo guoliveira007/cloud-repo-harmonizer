@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { BookOpen, Trash2 } from "lucide-react";
+import { BookOpen, FileUp, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 
 import { AppShell } from "@/components/AppShell";
 import { useViewer } from "@/components/SplitView";
 import { normalizeText } from "@/lib/lessons";
+import { generateFromEdital } from "@/lib/edital.functions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchMaterials,
@@ -73,6 +76,59 @@ function BibliotecaPage() {
   }, [materials, subjects, query, subjectFilter, status]);
 
 
+  const [editalSubject, setEditalSubject] = useState("");
+  const [editalBusy, setEditalBusy] = useState(false);
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const genFromEdital = useServerFn(generateFromEdital);
+
+  async function uploadEdital(file: File) {
+    if (!editalSubject) {
+      toast.error("Escolha a matéria do edital.");
+      return;
+    }
+    setEditalBusy(true);
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) throw new Error("Sessão expirada.");
+      const path = `${uid}/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+      const { error: upError } = await supabase.storage
+        .from("materiais")
+        .upload(path, file, { contentType: file.type || "application/pdf" });
+      if (upError) throw upError;
+      const { error } = await supabase.from("materials").insert({
+        user_id: uid,
+        subject_id: editalSubject,
+        title: file.name.replace(/\.pdf$/i, ""),
+        kind: "pdf",
+        source: "upload",
+        file_path: path,
+        file_size: file.size,
+        tags: ["edital"],
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      toast.success("Edital enviado. Agora gere questões inéditas a partir dele.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao enviar o edital.");
+    } finally {
+      setEditalBusy(false);
+    }
+  }
+
+  async function generateQuestions(materialId: string) {
+    setGeneratingId(materialId);
+    try {
+      const result = await genFromEdital({ data: { materialId, count: 15 } });
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      toast.success(`${result.created} questões inéditas geradas. Veja em Quizzes.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao gerar questões.");
+    } finally {
+      setGeneratingId(null);
+    }
+  }
+
   async function toggleRead(materialId: string, read: boolean) {
     await supabase.from("materials").update({ read }).eq("id", materialId);
     queryClient.invalidateQueries({ queryKey: ["materials"] });
@@ -137,6 +193,50 @@ function BibliotecaPage() {
       </div>
 
       <section className="mt-5 rounded-xl border border-line bg-card p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <FileUp className="size-4 text-sun-deep" />
+            <p className="font-display text-sm font-semibold">Edital → questões inéditas</p>
+          </div>
+          <select
+            value={editalSubject}
+            onChange={(e) => setEditalSubject(e.target.value)}
+            className="rounded-md border border-line bg-background px-3 py-1.5 text-sm"
+          >
+            <option value="">Matéria…</option>
+            {subjects
+              .filter((s) => !s.parent_id)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+          </select>
+          <label
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-md border border-line px-3 py-1.5 text-sm text-ink-soft transition-colors hover:border-sun ${editalBusy ? "pointer-events-none opacity-60" : ""}`}
+          >
+            {editalBusy ? <Loader2 className="size-4 animate-spin" /> : <FileUp className="size-4" />}
+            Enviar edital (PDF)
+            <input
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              disabled={editalBusy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void uploadEdital(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <p className="w-full text-xs text-ink-soft">
+            Envie o edital ou conteúdo programático e gere questões novas sem repetir as que você
+            já tem.
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-5 rounded-xl border border-line bg-card p-5">
         {filtered.length === 0 ? (
           <p className="text-sm text-ink-soft">
             Nenhum arquivo encontrado. Vá até uma matéria para enviar seus PDFs ou ajuste os
@@ -188,6 +288,20 @@ function BibliotecaPage() {
                       </div>
                     )}
                   </div>
+                  {(m.tags ?? []).includes("edital") && m.file_path && (
+                    <button
+                      onClick={() => generateQuestions(m.id)}
+                      disabled={generatingId === m.id}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md bg-sun px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                    >
+                      {generatingId === m.id ? (
+                        <Loader2 className="size-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-3" />
+                      )}
+                      Gerar questões
+                    </button>
+                  )}
                   <label className="flex items-center gap-1.5 font-mono text-[10px] text-ink-soft">
                     <input
                       type="checkbox"
