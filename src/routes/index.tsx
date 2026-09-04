@@ -1,9 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { Target } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { FlashcardReview } from "@/components/FlashcardReview";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { errorKindLabel } from "@/lib/practice";
 import {
   computeStreak,
   fetchFlashcards,
@@ -64,6 +68,52 @@ function Painel() {
     queryFn: () => fetchQuestions(),
   });
   const { data: sessions = [] } = useQuery({ queryKey: ["sessions"], queryFn: fetchSessions });
+
+  const pendingReviews = useQuery({
+    queryKey: ["subject-pending"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("error_reviews")
+        .select("id, error_type, created_at, question:exam_questions(subject_id, topic)");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const pendingSubjects = useMemo(() => {
+    const bySubject = new Map<
+      string | null,
+      { count: number; last: string; kinds: Map<string, number>; topics: Set<string> }
+    >();
+    for (const row of pendingReviews.data ?? []) {
+      const q = Array.isArray(row.question) ? row.question[0] : row.question;
+      const key = q?.subject_id ?? null;
+      const entry =
+        bySubject.get(key) ?? {
+          count: 0,
+          last: row.created_at,
+          kinds: new Map<string, number>(),
+          topics: new Set<string>(),
+        };
+      entry.count += 1;
+      if (row.created_at > entry.last) entry.last = row.created_at;
+      if (row.error_type)
+        entry.kinds.set(row.error_type, (entry.kinds.get(row.error_type) ?? 0) + 1);
+      if (q?.topic) entry.topics.add(q.topic);
+      bySubject.set(key, entry);
+    }
+    return [...bySubject.entries()]
+      .map(([subjectId, v]) => ({
+        subjectId,
+        name:
+          (subjectId ? subjects.find((s) => s.id === subjectId)?.name : null) ?? "Sem matéria",
+        count: v.count,
+        last: v.last,
+        topKind: [...v.kinds.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+        topics: [...v.topics].slice(0, 4),
+      }))
+      .sort((a, b) => b.count - a.count || b.last.localeCompare(a.last));
+  }, [pendingReviews.data, subjects]);
 
   const streak = computeStreak(sessions);
   const points = sessions.reduce((acc, s) => acc + s.cards_reviewed * 5 + s.correct * 10, 0);
@@ -265,6 +315,61 @@ function Painel() {
 
         </div>
       </section>
+
+      {pendingSubjects.length > 0 && (
+        <section className="mt-10">
+          <div className="flex items-center gap-2">
+            <Target className="size-4 text-sun-deep" />
+            <h2 className="font-display text-xl font-bold tracking-tight">Assuntos pendentes</h2>
+            <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 font-mono text-[10px] font-medium text-destructive">
+              {pendingSubjects.reduce((acc, s) => acc + s.count, 0)} erros para revisar
+            </span>
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {pendingSubjects.slice(0, 6).map((p) => (
+              <div key={p.subjectId ?? "sem"} className="rounded-xl border border-line bg-card p-4">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="font-display text-base font-semibold">{p.name}</p>
+                  <span className="font-mono text-[11px] text-ink-soft">
+                    {p.count} erro{p.count === 1 ? "" : "s"}
+                  </span>
+                </div>
+                {p.topKind && (
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Causa mais comum: {errorKindLabel(p.topKind)}
+                  </p>
+                )}
+                {p.topics.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {p.topics.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full border border-line px-2 py-0.5 text-[10px] text-ink-soft"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 flex gap-3">
+                  <Link
+                    to="/revisoes"
+                    className="font-mono text-[10px] uppercase tracking-[0.15em] text-sun-deep hover:underline"
+                  >
+                    Revisar erros
+                  </Link>
+                  <Link
+                    to="/praticar"
+                    className="font-mono text-[10px] uppercase tracking-[0.15em] text-sun-deep hover:underline"
+                  >
+                    Praticar
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mt-10">
         <div>
