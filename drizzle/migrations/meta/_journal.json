@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788497878488,
+      "tag": "0000_create_custom_lessons",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788497929078,
+      "tag": "0001_baseline_core_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788497990689,
+      "tag": "0002_subject_id_links_upload_sessions_storage_policies",
+      "breakpoints": true
+    }
+  ]
+}
