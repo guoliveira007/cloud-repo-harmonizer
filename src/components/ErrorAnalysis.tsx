@@ -105,8 +105,9 @@ export function ErrorAnalysis({ question, onDone, onCancel }: Props) {
         <ErrorKindPicker
           questionId={question.id}
           current={data.error_type}
-          onDone={onDone}
+          {...(onDone ? { onDone } : {})}
         />
+
 
         <button
           onClick={() => {
