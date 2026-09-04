@@ -116,10 +116,12 @@ export type Database = {
           correct_answer: string | null
           created_at: string
           exam_id: string
+          generation_sources: Json | null
           id: string
           is_correct: boolean | null
           number: number
           options: Json | null
+          source_type: string
           statement: string | null
           subject: string | null
           subject_id: string | null
@@ -131,10 +133,12 @@ export type Database = {
           correct_answer?: string | null
           created_at?: string
           exam_id: string
+          generation_sources?: Json | null
           id?: string
           is_correct?: boolean | null
           number: number
           options?: Json | null
+          source_type?: string
           statement?: string | null
           subject?: string | null
           subject_id?: string | null
@@ -146,10 +150,12 @@ export type Database = {
           correct_answer?: string | null
           created_at?: string
           exam_id?: string
+          generation_sources?: Json | null
           id?: string
           is_correct?: boolean | null
           number?: number
           options?: Json | null
+          source_type?: string
           statement?: string | null
           subject?: string | null
           subject_id?: string | null
